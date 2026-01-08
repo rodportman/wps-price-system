@@ -7,8 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "tauri": "tauri",
-    "release": "npm run build && git add . && git commit -m \"release\" || echo \"no git changes\" && git push && npx tauri build"
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
+    "release": "git add . && git commit -m \"release\" && git push && tauri build"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",
