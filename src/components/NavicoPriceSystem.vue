@@ -97,6 +97,12 @@
           </el-option>
         </el-select>
       </div>
+      <el-button
+        @click="openBatchDialog"
+        v-if="!isPrintMode"
+        class="batch-add-button"
+        >批量添加</el-button
+      >
     </div>
     <!-- 搜索选择框这一整条的格式 -->
     <div class="search-customer-container">
@@ -302,12 +308,6 @@
 
     <!-- 功能按钮区域 -->
     <div class="NewItemButton">
-      <el-button
-        @click="openBatchDialog"
-        v-if="!isPrintMode"
-        class="batch-add-button"
-        >批量添加</el-button
-      >
       <el-button @click="openAddCustomItemDialog" v-if="!isPrintMode"
         >增加自定义项 +</el-button
       >
@@ -1808,12 +1808,11 @@ const initSort = () => {
   display: flex;
   align-items: center;
   flex-grow: 1;
-  width: 600px;
+  width: 650px;
   position: sticky;
   top: 65px;
   z-index: 100;
   margin-left: auto; /* 让它靠右 */
-  width: 600px;
   background: #f5f8ff; /* 柔和底色 */
   border-radius: 14px;
   box-shadow: 0 4px 18px 0 rgba(60, 120, 240, 0.08),

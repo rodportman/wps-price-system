@@ -97,6 +97,12 @@
           </el-option>
         </el-select>
       </div>
+      <el-button
+        @click="openBatchDialog"
+        v-if="!isPrintMode"
+        class="batch-add-button"
+        >批量添加</el-button
+      >
     </div>
     <!-- 搜索选择框这一整条的格式 -->
     <div class="search-customer-container">
@@ -412,6 +418,47 @@
           <el-button type="primary" @click="confirmEdit">确认</el-button>
         </span>
       </template>
+    </el-dialog>
+    <!-- 批量添加弹窗：支持粘贴多行编码或上传 Excel/CSV（第一列编码，第二列数量可选） -->
+    <el-dialog v-model="batchDialogVisible" title="批量添加产品" width="520px">
+      <div style="display: flex; gap: 0px; flex-direction: column">
+        <span>方式一：复制粘贴PN及数量或输入多行产品编码</span>
+        <el-input
+          type="textarea"
+          v-model="batchInput"
+          :rows="4"
+          placeholder="示例：&#10;000-16107-001&#10;000-16108-001&#10;000-16109-001"
+        />
+        <span>方式二：识别Excel（第一列为PN，第二列为数量可选）</span>
+        <el-upload
+          class="batchFileRef"
+          :before-upload="handleBatchBeforeUpload"
+          :show-file-list="false"
+          accept=".xlsx,.xls,.csv"
+        >
+          <el-button type="primary">点击 识别EXCEL</el-button>
+        </el-upload>
+        <el-checkbox v-model="batchSkipExisting">跳过已存在项</el-checkbox>
+        <div style="display: flex; justify-content: flex-end">
+          <el-button @click="batchDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="processBatch">开始添加</el-button>
+        </div>
+        <div v-if="batchNotFound.length" style="margin-top: 8px">
+          <p style="margin: 0; font-weight: 600">
+            未找到的编码（共 {{ batchNotFound.length }}）：
+          </p>
+          <div
+            style="
+              max-height: 120px;
+              overflow: auto;
+              border: 1px solid #f0f0f0;
+              padding: 6px;
+            "
+          >
+            <div v-for="(p, i) in batchNotFound" :key="i">{{ p }}</div>
+          </div>
+        </div>
+      </div>
     </el-dialog>
     <div class="page-break"></div>
     <!-- Footer -->
@@ -1447,6 +1494,137 @@ const handleCancelAddCustomItem = () => {
   newCustomItem.Dealer = null; // 新增的含税价格
   newCustomItem.Retail = null;
 };
+// --------- 批量添加，逻辑相关 ---------
+const batchDialogVisible = ref(false);
+const batchInput = ref("");
+const batchFileRef = ref(null);
+const batchNotFound = ref([]);
+const batchSkipExisting = ref(true);
+const openBatchDialog = () => {
+  batchNotFound.value = [];
+  batchInput.value = "";
+  batchDialogVisible.value = true;
+  if (batchFileRef.value) batchFileRef.value.value = "";
+};
+
+const parsePartNumbersFromText = (text) => {
+  // 每行一条，支持 "PN" 或 "PN,数量"
+  const lines = String(text || "")
+    .split(/\r\n|\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  return lines.map((l) => {
+    const parts = l.split(/[,，\t]/).map((p) => p.trim());
+    return { part: parts[0], qty: Number(parts[1]) || 1 };
+  });
+};
+
+const processBatchList = (items) => {
+  batchNotFound.value = [];
+  const added = [];
+  items.forEach(({ part, qty }) => {
+    const code = String(part || "").trim();
+    if (!code) return;
+    const exists = originalTableData.value.some(
+      (it) => String(it.PartNumber).trim() === code
+    );
+    if (exists && batchSkipExisting.value) return;
+    const product = allProducts.value.find(
+      (p) => String(p.PartNumber).trim() === code
+    );
+    if (product) {
+      const newRow = {
+        ...product,
+        productType: ProductRange.value,
+        quantity: qty || 1,
+        customPrice: null,
+        RRP: product.rawRRP,
+        RRP113: product.rawRRP113,
+        Wholesaler: product.rawWholesaler,
+        Distributor: product.rawDistributor,
+        OEM: product.rawOEM,
+        Dealer: product.rawDealer,
+        Retail: product.rawRetail,
+        imageUrl: `/NavicoImg/${product.PartNumber}.png`,
+        uuid: uuidv4(),
+      };
+      originalTableData.value.push(newRow);
+      added.push(code);
+    } else {
+      batchNotFound.value.push(code);
+    }
+  });
+  if (added.length) {
+    dataProcessMethods();
+    ElMessage.success(
+      `已添加 ${added.length} 项，未找到 ${batchNotFound.value.length} 项`
+    );
+  } else {
+    if (batchNotFound.value.length)
+      ElMessage.warning(`未找到 ${batchNotFound.value.length} 项`);
+    else ElMessage.info("没有新项被添加");
+  }
+};
+
+const processBatch = () => {
+  const text = String(batchInput.value || "").trim();
+  if (text) {
+    const list = parsePartNumbersFromText(text);
+    processBatchList(list);
+    return;
+  }
+  ElMessage.info("请粘贴编码或上传文件后再点开始");
+};
+// element-upload 的 before-upload 钩子/上传处理
+const handleBatchBeforeUpload = async (file) => {
+  try {
+    // 复用已有解析函数 onBatchFileChange（它期望一个 event-like 对象）
+    await onBatchFileChange({ target: { files: [file] } });
+  } catch (err) {
+    console.error("handleBatchBeforeUpload 处理失败", err);
+    ElMessage.error("文件解析失败，请检查文件格式");
+  }
+  // 返回 false 阻止 el-upload 执行默认的上传请求
+  return false;
+};
+// 将上传的excel直接处理为表单数据
+const onBatchFileChange = async (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  try {
+    const ext = (file.name.split(".").pop() || "").toLowerCase();
+    if (ext === "csv") {
+      const text = await file.text();
+      const rows = text
+        .split(/\r\n|\n/)
+        .map((r) => r.split(","))
+        .filter((r) => r && r[0])
+        .map((r) => ({ part: String(r[0]).trim(), qty: Number(r[1]) || 1 }));
+      processBatchList(rows);
+    } else {
+      const ab = await file.arrayBuffer();
+      const wb = XLSX.read(ab, { type: "array" });
+      const sheetName = wb.SheetNames[0];
+      const ws = wb.Sheets[sheetName];
+      // 标题行，所以第一行会被扔掉
+      const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
+      // 找第一列为编码，第二列为数量（可选）
+      const rows = data
+        .slice(1)
+        .map((r) => ({
+          part: r[0] ? String(r[0]).trim() : "",
+          qty: Number(r[1]) || 1,
+        }))
+        .filter((r) => r.part);
+      processBatchList(rows);
+    }
+  } catch (err) {
+    console.error("批量文件解析失败", err);
+    ElMessage.error("文件解析失败，请检查格式");
+  } finally {
+    if (batchFileRef.value) batchFileRef.value.value = "";
+  }
+};
 
 // 新增语言切换相关逻辑
 const currentLanguage = ref("zh"); // 默认为中文
@@ -1726,12 +1904,11 @@ watch(
   display: flex;
   align-items: center;
   flex-grow: 1;
-  width: 600px;
+  width: 650px;
   position: sticky;
   top: 65px;
   z-index: 100;
   margin-left: auto; /* 让它靠右 */
-  width: 600px;
   background: #f5f8ff; /* 柔和底色 */
   border-radius: 14px;
   box-shadow: 0 4px 18px 0 rgba(60, 120, 240, 0.08),
@@ -1825,8 +2002,15 @@ watch(
   transform: scale(1.05); /* 鼠标悬停时轻微放大 */
   transition: all 0.3s ease; /* 平滑过渡效果 */
 }
+.batch-add-button {
+  background: #165dff;
+  color: #fff !important;
+}
+.batch-add-button:hover {
+  background: #165dff !important;
+  color: #fff !important;
+}
 
-/* 总计样式 */
 /* 总计样式 */
 .summary-bar {
   display: grid;
