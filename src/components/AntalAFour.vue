@@ -298,9 +298,26 @@
         ></div>
       </template>
       <!-- 总计 -->
-      <div class="total">
-        <span v-if="currentLanguage === 'zh'"> 总额： </span
-        ><span v-else> Total Amount: </span>{{ formatDisplayCurrency(total) }}
+      <div class="summary-bar">
+        <div class="summary-cell">
+          {{ currentLanguage === "zh" ? "合计" : "Total" }}
+        </div>
+        <div class="summary-cell">
+          <span class="label">
+            {{ currentLanguage === "zh" ? "数量" : "Quantity" }}：
+          </span>
+          <span class="value">
+            {{ totalQty }}
+          </span>
+        </div>
+        <div class="summary-cell">
+          <span class="label">
+            {{ currentLanguage === "zh" ? "金额" : "Total Amount" }}：
+          </span>
+          <span class="value amount">
+            {{ formatDisplayCurrency(totalAmount) }}
+          </span>
+        </div>
       </div>
     </div>
 
@@ -857,8 +874,12 @@ function generateQuoteNumber() {
   const minute = String(now.getMinutes()).padStart(2, "0");
   return `${yearLastDigit}${dayOfYear}${hour}${minute}`;
 }
-const total = ref(0);
+// 总和计算部分
+const totalAmount = ref(0);
 const tableData = ref([]);
+const totalQty = computed(() =>
+  tableData.value.reduce((sum, item) => sum + Number(item.quantity || 0), 0)
+);
 // 自动跟随客户类型变化
 const customerTypes = ref(customerTypesAntal);
 const selectedCustomerType = ref(customerTypes.value[0]?.type || "RRP");
@@ -1061,7 +1082,7 @@ const handleQuantityChange = (row) => {
 
 // 总额计算
 const calculateTotal = () => {
-  total.value = tableData.value
+  totalAmount.value = tableData.value
     .reduce((sum, item) => sum + Number(item.lineAmount || 0), 0)
     .toFixed(2);
 };
@@ -1788,12 +1809,41 @@ watch(
 }
 
 /* 总计样式 */
-.total {
-  text-align: right;
-  font-size: 20px;
+.summary-bar {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  align-items: center;
+  margin-top: 12px;
+  padding: 12px 16px;
+  background: linear-gradient(180deg, #fafafa, #ffffff);
+  border-top: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
+  color: #303133;
+}
+
+.summary-cell {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  font-size: 16px;
   font-weight: 600;
-  padding: 16px;
-  background: #fff;
+  text-align: center;
+}
+
+.summary-cell .label {
+  color: #606266;
+}
+
+.summary-cell .value {
+  font-weight: 600;
+}
+
+.summary-cell .amount {
+  color: #409eff; /* Element Plus 主色 */
+}
+.summary-cell:last-child {
+  justify-content: flex-end;
 }
 .table-container {
   background: white;
