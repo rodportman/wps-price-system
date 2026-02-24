@@ -505,7 +505,7 @@
               5. 报价单位（公司章）：深圳市威普塞船舶科技有限公司
               <img
                 v-if="showStamp"
-                src="/src/assets/company_stamp.png"
+                src="/src/assets/company_stampdemo.png"
                 alt="Company Stamp"
                 style="
                   position: absolute;
@@ -523,7 +523,7 @@
               6. 签名：______________________
               <img
                 v-if="showStamp"
-                src="/src/assets/sign.png"
+                src="/src/assets/signdemo.png"
                 alt="sign"
                 style="
                   position: absolute;
@@ -611,7 +611,7 @@
               5. Quoting Party ：Shenzhen heelperson marine Co., Ltd
               <img
                 v-if="showStamp"
-                src="/src/assets/company_stamp.png"
+                src="/src/assets/company_stampdemo.png"
                 alt="Company Stamp"
                 style="
                   position: absolute;
