@@ -5,6 +5,7 @@ import AntalPriceNew from "../components/AntalPriceNew.vue";
 import NavicoAFourPage from "../components/NavicoAFourPage.vue";
 import AntalAFour from "../components/AntalAFour.vue";
 import NavicoUSD from "../components/NavicoUSD.vue";
+import NavicoPriceSystemcopy from "../components/NavicoPriceSystemcopy.vue";
 
 
 const routes = [
@@ -17,6 +18,11 @@ const routes = [
     path: "/navico",
     name: "Navico",
     component: NavicoPriceSystem,
+  },
+  {
+    path: "/navicocopy",
+    name: "Navicocopy",
+    component: NavicoPriceSystemcopy,
   },
   {
     path: "/navicousd",

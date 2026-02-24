@@ -41,6 +41,7 @@ const showNav = ref(true);
 // 导航数据
 const navItems = [
   { title: "首页", path: "/" },
+  { title: "示例页面", path: "/navicocopy" },
   { title: "Navico", path: "/navico" },
   { title: "Navico美元版", path: "/navicousd" },
   { title: "Antalnew", path: "/antalnew", },

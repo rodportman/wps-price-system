@@ -1,5 +1,5 @@
 <template>
-  <div class="container">
+  <div class="container" style="display: none;">
     <!-- Header -->
     <div class="header">
       <img class="logo" src="/src/assets/wheelpersonLogo.png" alt="Logo" />
